@@ -117,32 +117,45 @@ namespace Microsoft.EntityFrameworkCore.Update
             LastCachedCommandIndex = commandPosition;
         }
 
-        protected virtual IRelationalCommand CreateStoreCommand()
+        protected virtual Tuple<IRelationalCommand, IReadOnlyDictionary<string, object>> CreateStoreCommand()
         {
             var commandBuilder = _commandBuilderFactory
                 .Create()
                 .Append(GetCommandText());
+
+            var parameterValues = new Dictionary<string, object>();
 
             foreach (var columnModification in ModificationCommands.SelectMany(t => t.ColumnModifications))
             {
                 if (columnModification.ParameterName != null)
                 {
                     commandBuilder.AddParameter(
+                        columnModification.ParameterName,
                         SqlGenerationHelper.GenerateParameterName(columnModification.ParameterName),
-                        columnModification.Value,
                         columnModification.Property);
+
+                    parameterValues.Add(
+                        columnModification.ParameterName,
+                        columnModification.Value);
                 }
 
                 if (columnModification.OriginalParameterName != null)
                 {
                     commandBuilder.AddParameter(
+                        columnModification.OriginalParameterName,
                         SqlGenerationHelper.GenerateParameterName(columnModification.OriginalParameterName),
-                        columnModification.OriginalValue,
                         columnModification.Property);
+
+
+                    parameterValues.Add(
+                        columnModification.OriginalParameterName,
+                        columnModification.OriginalValue);
                 }
             }
 
-            return commandBuilder.Build();
+            return new Tuple<IRelationalCommand, IReadOnlyDictionary<string, object>>(
+                commandBuilder.Build(),
+                parameterValues);
         }
 
         public override void Execute(IRelationalConnection connection)
@@ -153,7 +166,9 @@ namespace Microsoft.EntityFrameworkCore.Update
 
             try
             {
-                using (var dataReader = command.ExecuteReader(connection))
+                using (var dataReader = command.Item1.ExecuteReader(
+                    connection,
+                    parameterValues: command.Item2))
                 {
                     Consume(dataReader.DbDataReader);
                 }
@@ -178,7 +193,10 @@ namespace Microsoft.EntityFrameworkCore.Update
 
             try
             {
-                using (var dataReader = await command.ExecuteReaderAsync(connection, cancellationToken: cancellationToken))
+                using (var dataReader = await command.Item1.ExecuteReaderAsync(
+                    connection,
+                    parameterValues: command.Item2,
+                    cancellationToken: cancellationToken))
                 {
                     await ConsumeAsync(dataReader.DbDataReader, cancellationToken);
                 }
