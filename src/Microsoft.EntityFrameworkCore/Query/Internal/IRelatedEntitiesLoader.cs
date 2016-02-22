@@ -3,13 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 
 namespace Microsoft.EntityFrameworkCore.Query.Internal
 {
-    public interface IAsyncIncludeRelatedValuesStrategy : IDisposable
+    public interface IRelatedEntitiesLoader : IDisposable
     {
-        IAsyncEnumerable<EntityLoadInfo> GetRelatedValues(
-            [NotNull] IIncludeKeyComparer keyComparer);
+        IEnumerable<EntityLoadInfo> Load(QueryContext queryContext, IIncludeKeyComparer keyComparer);
     }
 }

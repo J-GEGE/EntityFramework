@@ -14,7 +14,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.FunctionalTests
         public IncludeSqlServerTest(NorthwindQuerySqlServerFixture fixture, ITestOutputHelper testOutputHelper)
             : base(fixture)
         {
-            //TestSqlLoggerFactory.CaptureOutput(testOutputHelper);
+            TestSqlLoggerFactory.CaptureOutput(testOutputHelper);
         }
 
         public override void Include_list()
@@ -630,6 +630,27 @@ INNER JOIN (
     INNER JOIN [Orders] AS [o] ON [c].[CustomerID] = [o].[CustomerID]
     WHERE [c].[CustomerID] = 'ALFKI'
 ) AS [c0] ON [o0].[CustomerID] = [c0].[CustomerID]
+ORDER BY [c0].[City], [c0].[CustomerID]",
+                Sql);
+        }
+
+        public override void Include_collection_when_groupby()
+        {
+            base.Include_collection_when_groupby();
+
+            Assert.Equal(
+                @"SELECT [c].[CustomerID], [c].[Address], [c].[City], [c].[CompanyName], [c].[ContactName], [c].[ContactTitle], [c].[Country], [c].[Fax], [c].[Phone], [c].[PostalCode], [c].[Region]
+FROM [Customers] AS [c]
+WHERE [c].[CustomerID] = 'ALFKI'
+ORDER BY [c].[City], [c].[CustomerID]
+
+SELECT [o].[OrderID], [o].[CustomerID], [o].[EmployeeID], [o].[OrderDate]
+FROM [Orders] AS [o]
+INNER JOIN (
+    SELECT DISTINCT [c].[City], [c].[CustomerID]
+    FROM [Customers] AS [c]
+    WHERE [c].[CustomerID] = 'ALFKI'
+) AS [c0] ON [o].[CustomerID] = [c0].[CustomerID]
 ORDER BY [c0].[City], [c0].[CustomerID]",
                 Sql);
         }
