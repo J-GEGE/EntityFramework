@@ -340,17 +340,18 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                 return null;
             }
 
-            var keyProps = keyColumns.Select(GetPropertyName)
-                .Where(name => builder.Metadata.FindProperty(name) != null)
-                .ToArray();
-
-            if (keyProps.Length != keyColumns.Count)
+            var keyMappedAndUnmapped = MappedPropertiesAndUnmappedColumns(keyColumns, builder.Metadata);
+            var keyProperties = keyMappedAndUnmapped.Item1;
+            var unmappedColumns = keyMappedAndUnmapped.Item2;
+            if (unmappedColumns.Any())
             {
-                Logger.LogWarning(RelationalDesignStrings.PrimaryKeyErrorPropertyNotFound(table.DisplayName));
+                Logger.LogWarning(RelationalDesignStrings.PrimaryKeyErrorPropertyNotFound(
+                    table.DisplayName,
+                    string.Join(CultureInfo.CurrentCulture.TextInfo.ListSeparator, unmappedColumns)));
                 return null;
             }
 
-            return builder.HasKey(keyProps);
+            return builder.HasKey(keyProperties.Select(p => p.Name).ToArray());
         }
 
         protected virtual EntityTypeBuilder VisitIndexes([NotNull] EntityTypeBuilder builder, [NotNull] ICollection<IndexModel> indexes)
@@ -371,21 +372,23 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
             Check.NotNull(builder, nameof(builder));
             Check.NotNull(index, nameof(index));
 
-            var propertyNames = index.IndexColumns
-                .OrderBy(ic => ic.Ordinal)
-                .Select(ic => GetPropertyName(ic.Column))
-                .ToArray();
-
-            if (propertyNames.Count(p => builder.Metadata.FindProperty(p) != null) != propertyNames.Length)
+            var indexMappedAndUnmapped = MappedPropertiesAndUnmappedColumns(
+                index.IndexColumns.OrderBy(ic => ic.Ordinal).Select(ic => ic.Column),
+                builder.Metadata);
+            var indexProperties = indexMappedAndUnmapped.Item1;
+            var unmappedColumns = indexMappedAndUnmapped.Item2;
+            if (unmappedColumns.Any())
             {
-                Logger.LogWarning(RelationalDesignStrings.UnableToScaffoldIndexMissingProperty(index.Name));
+                Logger.LogWarning(RelationalDesignStrings.UnableToScaffoldIndexMissingProperty(
+                    index.Name,
+                    string.Join(CultureInfo.CurrentCulture.TextInfo.ListSeparator, unmappedColumns)));
                 return null;
             }
 
             var columnNames = index.IndexColumns
                 .OrderBy(ic => ic.Ordinal)
                 .Select(ic => ic.Column.Name);
-
+            var propertyNames = indexProperties.Select(p => p.Name).ToArray();
             if (index.Table != null)
             {
                 var primaryKeyColumns = index.Table.Columns
@@ -404,7 +407,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                                 true, /* is primary key */
                                 primaryKeyColumns.Select(c => GetPropertyName(c))))
                     {
-                        builder.HasKey(propertyNames.ToArray()).HasName(index.Name);
+                        builder.HasKey(propertyNames).HasName(index.Name);
                     }
                     return null;
                 }
@@ -461,38 +464,37 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                 return null;
             }
 
-            var depProps = foreignKey.Columns
-                .OrderBy(fc => fc.Ordinal)
-                .Select(fc => GetPropertyName(fc.Column))
-                .Select(@from => dependentEntityType.FindProperty(@from))
-                .ToList()
-                .AsReadOnly();
-
-            if (depProps.Any(p => p == null))
+            var foreignKeyColumns = foreignKey.Columns.OrderBy(fc => fc.Ordinal);
+            var dependentMappedAndUnmapped = MappedPropertiesAndUnmappedColumns(
+                foreignKeyColumns.Select(fkColumn => fkColumn.Column),
+                dependentEntityType);
+            var dependentProps = dependentMappedAndUnmapped.Item1;
+            var unmappedColumns = dependentMappedAndUnmapped.Item2;
+            if (unmappedColumns.Any())
             {
-                // TODO log which column was not found
-                Logger.LogWarning(RelationalDesignStrings.ForeignKeyScaffoldErrorPropertyNotFound(foreignKey.DisplayName));
+                Logger.LogWarning(RelationalDesignStrings.ForeignKeyScaffoldErrorPropertyNotFound(
+                    foreignKey.DisplayName,
+                    string.Join(CultureInfo.CurrentCulture.TextInfo.ListSeparator, unmappedColumns)));
                 return null;
             }
 
             var principalEntityType = modelBuilder.Model.FindEntityType(GetEntityTypeName(foreignKey.PrincipalTable));
-
             if (principalEntityType == null)
             {
                 Logger.LogWarning(RelationalDesignStrings.ForeignKeyScaffoldErrorPrincipalTableScaffoldingError(foreignKey.DisplayName, foreignKey.PrincipalTable.DisplayName));
                 return null;
             }
 
-            var principalProps = foreignKey.Columns
-                .OrderBy(fc => fc.Ordinal)
-                .Select(fc => GetPropertyName(fc.PrincipalColumn))
-                .Select(to => principalEntityType.FindProperty(to))
-                .ToList()
-                .AsReadOnly();
-
-            if (principalProps.Any(p => p == null))
+            var principalMappedAndUnmapped = MappedPropertiesAndUnmappedColumns(
+                foreignKeyColumns.Select(fkColumn => fkColumn.PrincipalColumn),
+                principalEntityType);
+            var principalProps = principalMappedAndUnmapped.Item1;
+            unmappedColumns = principalMappedAndUnmapped.Item2;
+            if (unmappedColumns.Any())
             {
-                Logger.LogWarning(RelationalDesignStrings.ForeignKeyScaffoldErrorPropertyNotFound(foreignKey.DisplayName));
+                Logger.LogWarning(RelationalDesignStrings.ForeignKeyScaffoldErrorPropertyNotFound(
+                    foreignKey.DisplayName,
+                    string.Join(CultureInfo.CurrentCulture.TextInfo.ListSeparator, unmappedColumns)));
                 return null;
             }
 
@@ -507,8 +509,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                 }
                 else
                 {
-                    var principalColumns = foreignKey.Columns
-                        .OrderBy(fc => fc.Ordinal)
+                    var principalColumns = foreignKeyColumns
                         .Select(c => c.PrincipalColumn.Name)
                         .Aggregate((a, b) => a + "," + b);
 
@@ -519,9 +520,10 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                 }
             }
 
-            var key = dependentEntityType.GetOrAddForeignKey(depProps, principalKey, principalEntityType);
+            var key = dependentEntityType.GetOrAddForeignKey(
+                dependentProps.AsReadOnly(), principalKey, principalEntityType);
 
-            key.IsUnique = dependentEntityType.FindKey(depProps) != null;
+            key.IsUnique = dependentEntityType.FindKey(dependentProps) != null;
 
             key.Relational().Name = foreignKey.Name;
 
@@ -583,6 +585,30 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                     principalEndExistingIdentifiers.Add(principalEndNavigationPropertyName);
                 }
             }
+        }
+
+        private Tuple<List<IMutableProperty>, IEnumerable<string>> MappedPropertiesAndUnmappedColumns(
+            IEnumerable<ColumnModel> columns,
+            IMutableEntityType entityType)
+        {
+            var mappedProperties = new List<IMutableProperty>();
+            var unmappedColumnNames = new List<string>();
+            foreach (var column in columns)
+            {
+                var propertyName = GetPropertyName(column);
+                var property = entityType.FindProperty(propertyName);
+                if (property == null)
+                {
+                    unmappedColumnNames.Add(column.Name);
+                }
+                else
+                {
+                    mappedProperties.Add(property);
+                }
+            }
+
+            return new Tuple<List<IMutableProperty>, IEnumerable<string>>(
+                mappedProperties, unmappedColumnNames);
         }
 
         private static void AssignOnDeleteAction(

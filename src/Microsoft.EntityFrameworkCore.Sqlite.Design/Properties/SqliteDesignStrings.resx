@@ -117,6 +117,36 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="ColumnNameEmptyOnIndex" xml:space="preserve">
+    <value>Found a column on index {indexName} on table {tableName} with an empty or null name. Not including column in index.</value>
+  </data>
+  <data name="FoundColumn" xml:space="preserve">
+    <value>Found column on table: {tableName}, column name: {columnName}, data type: {dataType}, ordinal: {ordinal}, not nullable: {isNotNullable}, primary key ordinal: {primaryKeyOrdinal}, default value: {defaultValue}.</value>
+  </data>
+  <data name="FoundForeignKeyColumn" xml:space="preserve">
+    <value>Found foreign key column on table: {tableName}, id: {id}, principal table: {principalTableName}, column name: {columnName}, principal column name: {principalColumnName}, delete action: {deleteAction}, ordinal: {ordinal}.</value>
+  </data>
+  <data name="FoundIndex" xml:space="preserve">
+    <value>Found index with name: {indexName} on table: {tableName}.</value>
+  </data>
+  <data name="FoundIndexColumn" xml:space="preserve">
+    <value>Found index column on index {indexName} on table {tableName}, column name: {columnName}, ordinal: {ordinal}.</value>
+  </data>
+  <data name="FoundTable" xml:space="preserve">
+    <value>Found table with name: {name}.</value>
+  </data>
+  <data name="FoundUniqueIndex" xml:space="preserve">
+    <value>Determined that index: {indexName} on table {tableName} is unique.</value>
+  </data>
+  <data name="IndexTableNotInSelectionSet" xml:space="preserve">
+    <value>Index {indexName} belongs to table {tableName} which is not included in the selection set. Skipping.</value>
+  </data>
+  <data name="PrincipalTableNotInSelectionSet" xml:space="preserve">
+    <value>For foreign key id {id} on table {tableName}, unable to model the end of the foreign key on principal table {principalTableName}. This is usually because the principal table was not included in the selection set.</value>
+  </data>
+  <data name="TableNotInSelectionSet" xml:space="preserve">
+    <value>Table {tableName} is not included in the selection set. Skipping.</value>
+  </data>
   <data name="UsingSchemaSelectionsWarning" xml:space="preserve">
     <value>Scaffolding from a SQLite database will ignore any schema selection arguments. </value>
   </data>
