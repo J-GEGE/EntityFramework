@@ -466,13 +466,16 @@
     <value>The entity type '{entityType}' cannot be removed because '{derivedEntityType}' is derived from it. All derived entity types must be removed or redefined before the entity type can be removed.</value>
   </data>
   <data name="NavigationNotAdded" xml:space="preserve">
-    <value>The navigation '{navigation}' on entity type '{entityType}' has not been added to the model, or ignored, or target entityType ignored.</value>
+    <value>The navigation property '{navigation}' of type '{propertyType}' on entity type '{entityType}' has not been added to the model. Either manually configure a relationship using this property, ignore the property or ignore the target entity type.</value>
   </data>
   <data name="PropertyNotAdded" xml:space="preserve">
-    <value>The property '{property}' on entity type '{entityType}' has not been added to the model or ignored.</value>
+    <value>The property '{property}' on entity type '{entityType}' has not been added to the model, because it is of type '{propertyType}' which is not recognized as a supported primitive type or a valid entity type. Either explicitly map this property or ignore it.</value>
   </data>
   <data name="PropertyNotMapped" xml:space="preserve">
-    <value>The property '{property}' on entity type '{entityType}' has CLR type which is not supported by current provider and it has not been configured to use any supported column type.</value>
+    <value>The property '{property}' on entity type '{entityType}' is of type '{propertyType}' which is not supported by current provider. Either change the property CLR type or manually configure the provider type for it.</value>
+  </data>
+  <data name="InterfacePropertyNotAdded" xml:space="preserve">
+    <value>The property '{navigation}' of type '{propertyType}' on entity type '{entityType}' has not been added to the model. If it is a navigation property manually configure a relationship using this property by casting it to a mapped entity type otherwise ignore the property.</value>
   </data>
   <data name="NavigationForWrongForeignKey" xml:space="preserve">
     <value>The navigation property '{navigation}' on entity type '{entityType}' cannot be associated with foreign key {targetFk} because it was created for foreign key {actualFk}.</value>
