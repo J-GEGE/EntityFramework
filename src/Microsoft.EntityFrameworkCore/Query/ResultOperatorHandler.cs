@@ -27,12 +27,15 @@ namespace Microsoft.EntityFrameworkCore.Query
                 { typeof(AnyResultOperator), (v, _, __) => HandleAny(v) },
                 { typeof(AverageResultOperator), (v, _, __) => HandleAverage(v) },
                 { typeof(CastResultOperator), (v, r, __) => HandleCast(v, (CastResultOperator)r) },
+                { typeof(ConcatResultOperator), (v, r, __) => HandleConcat(v, (ConcatResultOperator)r) },
                 { typeof(CountResultOperator), (v, _, __) => HandleCount(v) },
                 { typeof(ContainsResultOperator), (v, r, q) => HandleContains(v, (ContainsResultOperator)r, q) },
                 { typeof(DefaultIfEmptyResultOperator), (v, r, q) => HandleDefaultIfEmpty(v, (DefaultIfEmptyResultOperator)r, q) },
                 { typeof(DistinctResultOperator), (v, _, __) => HandleDistinct(v) },
+                { typeof(ExceptResultOperator), (v, r, __) => HandleExcept(v, (ExceptResultOperator)r) },
                 { typeof(FirstResultOperator), (v, r, __) => HandleFirst(v, (ChoiceResultOperatorBase)r) },
                 { typeof(GroupResultOperator), (v, r, q) => HandleGroup(v, (GroupResultOperator)r, q) },
+                { typeof(IntersectResultOperator), (v, r, __) => HandleIntersect(v, (IntersectResultOperator)r) },
                 { typeof(LastResultOperator), (v, r, __) => HandleLast(v, (ChoiceResultOperatorBase)r) },
                 { typeof(LongCountResultOperator), (v, _, __) => HandleLongCount(v) },
                 { typeof(MinResultOperator), (v, _, __) => HandleMin(v) },
@@ -41,7 +44,8 @@ namespace Microsoft.EntityFrameworkCore.Query
                 { typeof(SingleResultOperator), (v, r, __) => HandleSingle(v, (ChoiceResultOperatorBase)r) },
                 { typeof(SkipResultOperator), (v, r, __) => HandleSkip(v, (SkipResultOperator)r) },
                 { typeof(SumResultOperator), (v, _, __) => HandleSum(v) },
-                { typeof(TakeResultOperator), (v, r, __) => HandleTake(v, (TakeResultOperator)r) }
+                { typeof(TakeResultOperator), (v, r, __) => HandleTake(v, (TakeResultOperator)r) },
+                { typeof(UnionResultOperator), (v, r, __) => HandleUnion(v, (UnionResultOperator)r) }
             };
 
         public virtual Expression HandleResultOperator(
@@ -111,6 +115,20 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entityQueryModelVisitor.Expression);
         }
 
+        private static Expression HandleConcat(
+            EntityQueryModelVisitor entityQueryModelVisitor,
+            ConcatResultOperator concateResultOperator)
+        {
+            var source2 = entityQueryModelVisitor
+                .ReplaceClauseReferences(concateResultOperator.Source2);
+
+            return Expression.Call(
+                entityQueryModelVisitor.LinqOperatorProvider.Concat
+                    .MakeGenericMethod(entityQueryModelVisitor.Expression.Type.GetSequenceType()),
+                entityQueryModelVisitor.Expression,
+                source2);
+        }
+
         private static Expression HandleCount(EntityQueryModelVisitor entityQueryModelVisitor)
             => CallWithPossibleCancellationToken(
                 entityQueryModelVisitor.LinqOperatorProvider
@@ -167,6 +185,20 @@ namespace Microsoft.EntityFrameworkCore.Query
                     .MakeGenericMethod(entityQueryModelVisitor.Expression.Type.GetSequenceType()),
                 entityQueryModelVisitor.Expression);
 
+        private static Expression HandleExcept(
+            EntityQueryModelVisitor entityQueryModelVisitor,
+            ExceptResultOperator exceptResultOperator)
+        {
+            var source2 = entityQueryModelVisitor
+                .ReplaceClauseReferences(exceptResultOperator.Source2);
+
+            return Expression.Call(
+                entityQueryModelVisitor.LinqOperatorProvider.Except
+                    .MakeGenericMethod(entityQueryModelVisitor.Expression.Type.GetSequenceType()),
+                entityQueryModelVisitor.Expression,
+                source2);
+        }
+
         private static Expression HandleFirst(
             EntityQueryModelVisitor entityQueryModelVisitor, ChoiceResultOperatorBase choiceResultOperator)
             => CallWithPossibleCancellationToken(
@@ -211,6 +243,20 @@ namespace Microsoft.EntityFrameworkCore.Query
                 .AddOrUpdateMapping(groupResultOperator, entityQueryModelVisitor.CurrentParameter);
 
             return expression;
+        }
+
+        private static Expression HandleIntersect(
+            EntityQueryModelVisitor entityQueryModelVisitor,
+            IntersectResultOperator intersectResultOperator)
+        {
+            var source2 = entityQueryModelVisitor
+                .ReplaceClauseReferences(intersectResultOperator.Source2);
+
+            return Expression.Call(
+                entityQueryModelVisitor.LinqOperatorProvider.Intersect
+                    .MakeGenericMethod(entityQueryModelVisitor.Expression.Type.GetSequenceType()),
+                entityQueryModelVisitor.Expression,
+                source2);
         }
 
         private static Expression HandleLast(
@@ -271,6 +317,20 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entityQueryModelVisitor.Expression,
                 new DefaultQueryExpressionVisitor(entityQueryModelVisitor)
                     .Visit(takeResultOperator.Count));
+
+        private static Expression HandleUnion(
+            EntityQueryModelVisitor entityQueryModelVisitor,
+            UnionResultOperator unionResultOperator)
+        {
+            var source2 = entityQueryModelVisitor
+                .ReplaceClauseReferences(unionResultOperator.Source2);
+
+            return Expression.Call(
+                entityQueryModelVisitor.LinqOperatorProvider.Union
+                    .MakeGenericMethod(entityQueryModelVisitor.Expression.Type.GetSequenceType()),
+                entityQueryModelVisitor.Expression,
+                source2);
+        }
 
         private static Expression HandleAggregate(EntityQueryModelVisitor entityQueryModelVisitor, string methodName)
             => CallWithPossibleCancellationToken(
